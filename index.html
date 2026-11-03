@@ -1,0 +1,79 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Streaks: Habit Tracker</title>
+<style>
+:root{--bg:#f6f7f9;--card:#fff;--text:#1c2430;--muted:#6b7686;--cell:#e6e9ee;--on:#2f9e6b;--line:#dde1e7}
+@media (prefers-color-scheme:dark){:root{--bg:#12161c;--card:#1b212a;--text:#e8ecf1;--muted:#8b97a8;--cell:#2a323d;--on:#3cc58a;--line:#2a323d}}
+*{box-sizing:border-box}
+body{margin:0;background:var(--bg);color:var(--text);font:16px/1.5 system-ui,sans-serif}
+main{max-width:640px;margin:0 auto;padding:24px 16px 64px}
+h1{margin:0 0 4px}.sub{color:var(--muted);margin:0 0 20px}
+form{display:flex;gap:8px;margin-bottom:20px}
+input{flex:1;padding:10px 12px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--text);font:inherit}
+button{padding:10px 14px;border:0;border-radius:8px;background:var(--on);color:#fff;font:inherit;cursor:pointer}
+button.ghost{background:none;color:var(--muted);padding:4px 8px}
+.habit{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px 16px;margin-bottom:14px}
+.top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.name{font-weight:600}.stats{color:var(--muted);font-size:14px}
+.grid{display:grid;grid-template-columns:repeat(7,1fr);gap:5px;margin-top:12px}
+.cell{aspect-ratio:1;border-radius:5px;background:var(--cell);border:0;padding:0}
+.cell.on{background:var(--on)}.cell.today{outline:2px solid var(--muted);outline-offset:1px}
+.empty{color:var(--muted);text-align:center;padding:32px 0}
+</style>
+</head>
+<body>
+<main>
+  <h1>Streaks</h1>
+  <p class="sub">Tap a square to mark a day. Last 5 weeks shown. Data stays in your browser.</p>
+  <form id="form"><input id="name" placeholder="New habit, e.g. Read 20 minutes" maxlength="60" required><button>Add</button></form>
+  <div id="list"></div>
+</main>
+<script src="logic.js"></script>
+<script>
+const STORE = "streaks.v1", DAYS = 35, L = Logic;
+let habits = [];
+try { habits = JSON.parse(localStorage.getItem(STORE)) || []; } catch (e) {}
+const save = () => { try { localStorage.setItem(STORE, JSON.stringify(habits)); } catch (e) {} };
+const el = (tag, cls, text) => { const n = document.createElement(tag); if (cls) n.className = cls; if (text) n.textContent = text; return n; };
+
+function render() {
+  const list = document.getElementById("list");
+  list.replaceChildren();
+  if (!habits.length) list.append(el("div", "empty", "No habits yet. Add your first one above."));
+  const today = new Date();
+  habits.forEach((h) => {
+    const card = el("div", "habit"), top = el("div", "top"), info = el("div");
+    info.append(el("div", "name", h.name),
+      el("div", "stats", `🔥 ${L.currentStreak(h.done, today)} day streak · best ${L.longestStreak(h.done)}`));
+    const del = el("button", "ghost", "Delete");
+    del.onclick = () => { if (confirm(`Delete "${h.name}"?`)) { habits = habits.filter((x) => x.id !== h.id); save(); render(); } };
+    top.append(info, del);
+    const grid = el("div", "grid");
+    for (let i = DAYS - 1; i >= 0; i--) {
+      const d = L.addDays(today, -i), k = L.key(d), cell = el("button", "cell");
+      cell.title = d.toDateString();
+      cell.setAttribute("aria-pressed", h.done.includes(k));
+      if (h.done.includes(k)) cell.classList.add("on");
+      if (i === 0) cell.classList.add("today");
+      cell.onclick = () => { h.done = h.done.includes(k) ? h.done.filter((x) => x !== k) : [...h.done, k]; save(); render(); };
+      grid.append(cell);
+    }
+    card.append(top, grid);
+    list.append(card);
+  });
+}
+
+document.getElementById("form").onsubmit = (e) => {
+  e.preventDefault();
+  const input = document.getElementById("name"), name = input.value.trim();
+  if (!name) return;
+  habits.push({ id: Date.now().toString(36), name, done: [] });
+  input.value = ""; save(); render();
+};
+render();
+</script>
+</body>
+</html>

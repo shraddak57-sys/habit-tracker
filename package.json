@@ -1,0 +1,7 @@
+{
+  "name": "streaks-habit-tracker",
+  "version": "1.0.0",
+  "description": "A dependency-free habit tracker with streaks and a 5-week heatmap.",
+  "scripts": { "test": "node --test" },
+  "license": "MIT"
+}
